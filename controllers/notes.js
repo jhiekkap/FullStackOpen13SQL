@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken')
 const { SECRET } = require('../util/config')
 const router = require('express').Router()
 const { Note, User } = require('../models')
+const { Op } = require('sequelize')
 
 const tokenExtractor = (req, res, next) => {
   const authorization = req.get('authorization')
@@ -9,7 +10,7 @@ const tokenExtractor = (req, res, next) => {
     try {
       console.log(authorization.substring(7))
       req.decodedToken = jwt.verify(authorization.substring(7), SECRET)
-    } catch (error){
+    } catch (error) {
       console.log(error)
       return res.status(401).json({ error: 'token invalid' })
     }
@@ -20,27 +21,40 @@ const tokenExtractor = (req, res, next) => {
 }
 
 const noteFinder = async (req, _res, next) => {
-    req.note = await Note.findByPk(req.params.id)
-    next()
+  req.note = await Note.findByPk(req.params.id)
+  next()
+}
+
+router.get('/', async (req, res) => {
+  const where = {}
+
+  if (req.query.important) {
+    where.important = req.query.important === "true"
   }
 
-  router.get('/', async (req, res) => {
-    const notes = await Note.findAll({
-      attributes: { exclude: ['userId'] },
-      include: {
-        model: User,
-        attributes: ['name']
-      }
-    })
-    res.json(notes)
+  if (req.query.search) {
+    where.content = {
+      [Op.substring]: req.query.search
+    }
+  }
+
+  const notes = await Note.findAll({
+    attributes: { exclude: ['userId'] },
+    include: {
+      model: User,
+      attributes: ['name']
+    },
+    where,
   })
+  res.json(notes)
+})
 
 router.post('/', tokenExtractor, async (req, res) => {
   try {
     const user = await User.findByPk(req.decodedToken.id)
-    const note = await Note.create({...req.body, userId: user.id, date: new Date()})
+    const note = await Note.create({ ...req.body, userId: user.id, date: new Date() })
     res.json(note)
-  } catch(error) {
+  } catch (error) {
     return res.status(400).json({ error })
   }
 })
@@ -53,7 +67,7 @@ router.get('/:id', noteFinder, async (req, res) => {
   }
 })
 
-router.delete('/:id',noteFinder,  async (req, res) => {
+router.delete('/:id', noteFinder, async (req, res) => {
   if (req.note) {
     await req.note.destroy()
   }
@@ -61,13 +75,13 @@ router.delete('/:id',noteFinder,  async (req, res) => {
 })
 
 router.put('/:id', noteFinder, async (req, res) => {
-    if (req.note) {
-        req.note.important = req.body.important
-        await req.note.save()
-        res.json(req.note)
-      } else {
-        res.status(404).end()
-      }
+  if (req.note) {
+    req.note.important = req.body.important
+    await req.note.save()
+    res.json(req.note)
+  } else {
+    res.status(404).end()
+  }
 })
 
 module.exports = router
