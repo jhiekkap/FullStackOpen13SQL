@@ -1,0 +1,52 @@
+DOCKER
+docker run -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 postgres
+docker ps
+docker exec -it <id> psql -U postgres postgres
+
+flyctl proxy 5432 -a fullstack13sql-db
+
+fly postgres connect -a fullstack13sql-db
+\d
+\d blogs;
+\dt
+select * from blogs;
+
+
+const main = async () => {
+  try {
+    console.log('DATABASE_URL', process.env.DATABASE_URL)
+    await sequelize.authenticate()
+    console.log('Connection has been established successfully.')
+  const blogs = await sequelize.query("SELECT * FROM blogs", { type: QueryTypes.SELECT })
+   blogs.forEach((blog) => {
+    console.log(`${blog.author}: '${blog.title}', ${blog.likes} likes`)
+   })
+    sequelize.close()
+  } catch (error) {
+    console.error('Unable to connect to the database:', error)
+  }
+}
+
+main()
+
+
+app.put('/api/blogs/:id', async (req, res) => {
+  const blog = await Blog.findByPk(req.params.id)
+  if (blog) {
+    blog.important = req.body.important
+    await blog.save()
+    res.json(blog)
+  } else {
+    res.status(404).end()
+  }
+})
+
+
+/* const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
+    }
+  },
+}); */
