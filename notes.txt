@@ -2,10 +2,11 @@ DOCKER
 docker run -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 postgres
 docker ps
 docker exec -it <id> psql -U postgres postgres
+DATABASE_URL=postgres://postgres:mysecretpassword@localhost:5432/postgres
 
 flyctl proxy 5432 -a fullstack13sql-db
-
 fly postgres connect -a fullstack13sql-db
+
 \d
 \d blogs;
 \dt
